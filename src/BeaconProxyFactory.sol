@@ -22,13 +22,9 @@ contract BeaconProxyFactory is IBeaconProxyFactory {
     bytes32 public constant proxyHash = keccak256(type(FactoryCreatedBeaconProxy).creationCode);
     bytes32 private constant PROOF_MESSAGE = keccak256("Approve wallet creation");
     
-    struct walletInfo{
-        uint256 amountDeposited;
-        mapping(address=>bool) isActiveAddress;
-    }
-    mapping(address=>walletInfo) public ownerToWalletInfo;
+   mapping(address=>uint256) private amountByAddress;
 
-    event ContractDeployed(address indexed contractAddress, bool indexed wasSigned);
+    event ContractDeployed(address indexed contractAddress, bool indexed wasRedeployed);
 
     error BeaconProxyDeployFailed();
     error BeaconImplInvalid();
@@ -52,43 +48,35 @@ contract BeaconProxyFactory is IBeaconProxyFactory {
         beacon = address(new UpgradeableBeacon(_beaconImpl, msg.sender));
     }
 
-      receive() external payable{}
-
+    fallback() external payable{
+        amountByAddress[tx.origin] =  amountByAddress[tx.origin] + msg.value;
+    }
     /**
      * @dev Deploys a new WalletProxy contract based on the salt provided and the caller of the contract.
      * @param _userSalt The salt to use for the deterministic address calculation. Gets concatenated with the caller address.
+     * @param _walletOwner Owner of the Smart Wallet .
      */
     function createProxy(bytes32 _userSalt, address _walletOwner) external returns (address createdContract_) {
         createdContract_ = _create(getSalt(_walletOwner, _userSalt));
-
         IMain(createdContract_).initialize(_walletOwner);
-        // storing the deployed wallet Information in struct Datatype;
-        walletInfo storage wallet = ownerToWalletInfo[_walletOwner];
-        wallet.isActiveAddress[createdContract_] = true;
-        // ownerToWalletInfo[_walletOwner]=wallet;
 
-        emit ContractDeployed(createdContract_, false);
+        if(amountByAddress[_walletOwner] > 0){
+           
+            uint256 valueSend = amountByAddress[_walletOwner];
+            amountByAddress[_walletOwner] = 0;
+            (bool success ,) = createdContract_.call{value : valueSend }("");
+            require(success, "Transaction failed");
+
+            emit ContractDeployed(createdContract_, true);
+
+        }else{
+
+            emit ContractDeployed(createdContract_, false);
+        }
     }
 
-
-
-    /**
-     * @dev Deploys a new WalletProxy contract based on the salt provided and the caller of the contract.
-     * @param _userSalt The salt to use for the deterministic address calculation. Gets concatenated with the caller address.
-     */
-    function destroyAndReDeployWallet(address _walletOwner,bytes32 _userSalt) public payable{
-        walletInfo storage wallet = ownerToWalletInfo[_walletOwner];
-        require(wallet.isActiveAddress[msg.sender],"Not a valid Owner of any of the deployed contract");  
-        wallet.amountDeposited = wallet.amountDeposited + msg.value;
-        wallet.isActiveAddress[msg.sender] = false;
-        
-        address createdContract  = _create(getSalt(_walletOwner, _userSalt));
-        wallet.isActiveAddress[createdContract] =true;
-
-        uint256 valueSend = wallet.amountDeposited;
-        wallet.amountDeposited = 0;
-        (bool success ,) = createdContract.call{value : valueSend }("");
-        require(success, "Transaction failed");
+    function getBalance(address _a) public view returns(uint256){
+        return amountByAddress[_a];
     }
 
     /**
