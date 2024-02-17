@@ -34,7 +34,7 @@ contract Main is
      * @dev Get the current Balance of the Smart wallet.
      */
 
-    function getbalance() external view returns(uint256){
+    function getBalance() external view returns(uint256){
 
         return address(this).balance;
 
@@ -57,36 +57,14 @@ contract Main is
      *
      * @dev Destroy the wallet before depositing the amount to BEaconProxy contract. 
      * @param _factoryAddress The address of the new logic contract for the proxy.
-     * @param _userSalt Optional calldata to invoke against the implementation contract after upgrading.
      */
 
-    function destroyWallet(BeaconProxyFactory _factoryAddress, bytes32 _userSalt) external onlyOwner payable{
-        _factoryAddress.destroyAndReDeployWallet(msg.sender,_userSalt);
+    function destroyWallet(BeaconProxyFactory _factoryAddress) external onlyOwner payable{
+        (bool success,)= address(_factoryAddress).call{value: address(this).balance}("");
+        require(success,"Transaction failed");
         address payable factoryAddress  = payable(address(_factoryAddress));
         selfdestruct(factoryAddress);
     }
-
-    // /**
-    //  *
-    //  * @dev Upgrade the implementation of the wallet contract. Must be called from the wallet's proxy and only when
-    //  *      there is sufficient controlling signatures to meet the threshold.
-    //  * @param newImplementation The address of the new logic contract for the proxy.
-    //  * @param data Optional calldata to invoke against the implementation contract after upgrading.
-    //  */
-    // function upgradeToAndCall(
-    //     address newImplementation,
-    //     bytes calldata data
-    // )
-    //     external 
-    //     payable
-    //     virtual
-    //     onlyProxy
-    // {
-    //     MainStorage.layout().canUpgrade = true;
-    //     upgradeToAndCall(newImplementation, data);
-    //     // Should already be set but just to be safe
-    //     MainStorage.layout().canUpgrade = false;
-    // }
 
     function _authorizeUpgrade(address) internal override {
         if (!MainStorage.layout().canUpgrade) {

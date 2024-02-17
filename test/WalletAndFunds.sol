@@ -1,28 +1,14 @@
-// SPDX-License-Identifier: Unlicense
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
 import { TestBase } from "./utils/TestBase.sol";
-
 import { UpgradeableBeacon } from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
-
 import { BeaconProxyFactory } from "src/BeaconProxyFactory.sol";
 import { Main, IMain } from "src/wallet/Main.sol";
 
 import "forge-std/console.sol";
 
-contract MainImpl is Main {
-    function isNew() public pure returns (bool) {
-        return false;
-    }
-}
-
-contract MainImplNew is Main {
-    function isNew() public pure returns (bool) {
-        return true;
-    }
-}
-
-contract BeaconUpgradesTest is TestBase {
+contract WalletAndFunds is TestBase {
     BeaconProxyFactory _factory;
     Main _wallet1;
     Main _wallet2;
@@ -45,6 +31,11 @@ contract BeaconUpgradesTest is TestBase {
 
     }
 
+    function testBalance() public {
+        deal(address(_wallet1),5 ether);
+        assertEq(address(_wallet1).balance,_wallet1.getBalance());
+    }
+
     function testSendEthFromWallet1ToWallet2() public {
         deal(address(_wallet1),5 ether);
         assertEq(5 ether, address(_wallet1).balance);
@@ -60,21 +51,7 @@ contract BeaconUpgradesTest is TestBase {
 
     function testBalanceofWallet() public {
         assertEq(0,address(_wallet2).balance);
+        assertEq(0,address(_wallet1).balance);
     }
 
-    // function testChangeBeaconUpdatesSingleProxy() public {
-    //     assertFalse(_wallet1.isNew());
-    //     MainImplNew _newImpl = new MainImplNew();
-    //     _beacon.upgradeTo(address(_newImpl));
-    //     assertTrue(_wallet1.isNew());
-    // }
-
-    // function testChangingBeaconUpdatesManyProxies() public {
-    //     assertFalse(_wallet1.isNew());
-    //     assertFalse(_wallet2.isNew());
-    //     MainImplNew _newImpl = new MainImplNew();
-    //     _beacon.upgradeTo(address(_newImpl));
-    //     assertTrue(_wallet1.isNew());
-    //     assertTrue(_wallet2.isNew());
-    // }
 }
