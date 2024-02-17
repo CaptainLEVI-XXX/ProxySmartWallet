@@ -48,7 +48,7 @@ contract BeaconProxyFactory is IBeaconProxyFactory {
         beacon = address(new UpgradeableBeacon(_beaconImpl, msg.sender));
     }
 
-    fallback() external payable{
+    receive() external payable{
         amountByAddress[tx.origin] =  amountByAddress[tx.origin] + msg.value;
     }
     /**
