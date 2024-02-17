@@ -47,7 +47,7 @@ contract WalletProxyFactory {
         latestWalletImplementation = _walletImpl;
     }
 
-    fallback() external payable{
+    receive() external payable{
         amountByAddress[tx.origin] =  amountByAddress[tx.origin] + msg.value;
     }
 
