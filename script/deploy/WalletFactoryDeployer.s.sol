@@ -29,6 +29,3 @@ contract WalletFactoryDeployer is Script, Utils {
         vm.stopBroadcast();
     }
 }
-
-// forge script script/deploy/WalletFactoryDeployer.s.sol --rpc-url https://sepolia.infura.io/v3/0ba109fff3bd45b19289ee08e0ed03de --broadcast --verify
-
